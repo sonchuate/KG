@@ -1,4 +1,5 @@
 from neo4j import GraphDatabase
+from src.preprocess.utils import process_string
 
 class Node:
     def __init__(self, label: str, properties: dict):
@@ -17,7 +18,7 @@ class Node:
 
         with driver.session() as session:
             try:
-                session.run(query, name=self.properties["name"])
+                session.run(query, name=process_string(self.properties["name"]))
             except Exception as e:
                 print("Neo4j Error:", e)
 
@@ -25,7 +26,7 @@ class Node:
         """Xoá node khỏi Neo4j"""
         query = f"MATCH (n:{self.label} {{name: $name}}) DETACH DELETE n"
         with driver.session() as session:
-            session.run(query, name=self.properties.get("name"))
+            session.run(query, name=process_string(self.properties.get("name")))
 
 class Edge:
     def __init__(self, src_node: Node, trg_node: Node, rel_type: str):
@@ -42,8 +43,8 @@ class Edge:
         """
         with driver.session() as session:
             session.run(
-                query, from_name=self.src_node.properties.get("name"),
-                to_name=self.trg_node.properties.get("name"),
+                query, from_name=process_string(self.src_node.properties.get("name")),
+                to_name=process_string(self.trg_node.properties.get("name")),
             )
 
     def delete(self, driver):
@@ -53,8 +54,9 @@ class Edge:
         DELETE r
         """
         with driver.session() as session:
-            session.run(query, from_name=self.src_node.properties.get("name"),
-                        to_name=self.trg_node.properties.get("name"))
+            session.run(query, from_name=process_string(self.src_node.properties.get("name")),
+                        to_name=process_string(self.trg_node.properties.get("name"))
+            )
     
 class Graph:
     def __init__(self, list_nodes:list[Node], list_edges:list[Edge]):
@@ -130,7 +132,7 @@ class GraphManager:
         """
         related_nodes = []
         with self.driver.session() as session:
-            result = session.run(query, name=node.properties["name"])
+            result = session.run(query, name=process_string(node.properties["name"]))
             for record in result:
                 related_node = Node(label=record["label"], properties=dict(record["node"]))
                 related_nodes.append(
@@ -150,7 +152,7 @@ class GraphManager:
         """
         relations_to_node = []
         with self.driver.session() as session:
-            result = session.run(query, name=node.properties["name"])
+            result = session.run(query, name=process_string(node.properties["name"]))
             for record in result:
                 from_node = Node(label=record["label"], properties=dict(record["node"]))
                 relations_to_node.append(
@@ -170,7 +172,7 @@ class GraphManager:
         """
         relations_from_node = []
         with self.driver.session() as session:
-            result = session.run(query, name=node.properties["name"])
+            result = session.run(query, name=process_string(node.properties["name"]))
             for record in result:
                 to_node = Node(label=record["label"], properties=dict(record["node"]))
                 relations_from_node.append(
@@ -180,6 +182,8 @@ class GraphManager:
         return relations_from_node
     
     def shortest_distance(self, name1: str, name2: str, max_length=10) -> int:
+        name1 = process_string(name1)
+        name2 = process_string(name2)
         if name1 == name2:
             return 0
         

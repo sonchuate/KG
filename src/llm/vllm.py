@@ -4,7 +4,7 @@ import requests as rq
 
 class vLLM_LLM(LLM):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.model_name = config.get('model_name', "Qwen/Qwen2.5-7B-Instruct")
         self.url = config.get('url', "") + "/v1/chat/completions"
         if self.url == "/v1/chat/completions":

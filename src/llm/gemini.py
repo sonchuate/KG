@@ -4,7 +4,7 @@ import requests as rq
 
 class Gemini_LLM(LLM):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.model_name = config.get('model_name', 'gemini-1.5-flash')
         self.gemini_key = config.get('gemini_key', '')
         if self.gemini_key == "":

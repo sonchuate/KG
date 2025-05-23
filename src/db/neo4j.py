@@ -5,6 +5,7 @@ class Node:
     def __init__(self, label: str, properties: dict):
         self.label = label
         self.properties = properties
+        self.properties["name"] = process_string(self.properties["name"])
 
     def create(self, driver):
         """Thêm node vào Neo4j"""
@@ -18,7 +19,7 @@ class Node:
 
         with driver.session() as session:
             try:
-                session.run(query, name=process_string(self.properties["name"]))
+                session.run(query, name=self.properties["name"])
             except Exception as e:
                 print("Neo4j Error:", e)
 
@@ -26,13 +27,15 @@ class Node:
         """Xoá node khỏi Neo4j"""
         query = f"MATCH (n:{self.label} {{name: $name}}) DETACH DELETE n"
         with driver.session() as session:
-            session.run(query, name=process_string(self.properties.get("name")))
+            session.run(query, name=self.properties["name"])
 
 class Edge:
     def __init__(self, src_node: Node, trg_node: Node, rel_type: str):
         self.src_node = src_node
         self.trg_node = trg_node
         self.rel_type = rel_type
+        self.src_node.properties["name"] = process_string(self.src_node.properties.get("name"))
+        self.trg_node.properties["name"] = process_string(self.trg_node.properties.get("name"))
 
     def create(self, driver):
         """Thêm cạnh giữa 2 node vào Neo4j"""
@@ -43,8 +46,8 @@ class Edge:
         """
         with driver.session() as session:
             session.run(
-                query, from_name=process_string(self.src_node.properties.get("name")),
-                to_name=process_string(self.trg_node.properties.get("name")),
+                query, from_name=self.src_node.properties["name"],
+                to_name=self.trg_node.properties["name"],
             )
 
     def delete(self, driver):
@@ -54,8 +57,8 @@ class Edge:
         DELETE r
         """
         with driver.session() as session:
-            session.run(query, from_name=process_string(self.src_node.properties.get("name")),
-                        to_name=process_string(self.trg_node.properties.get("name"))
+            session.run(query, from_name=self.src_node.properties["name"],
+                        to_name=self.trg_node.properties["name"]
             )
     
 class Graph:

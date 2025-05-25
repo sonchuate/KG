@@ -4,9 +4,15 @@ from typing import List, Tuple
 from src.prompt.index import (
     GRAPH_EXTRACTION_PROMPT_v0,
     INCLUDE_RELATIONSHIP_EXTRACTION_PROMPT,
-    CV_EXTRACT_GRAPH_PROMPT
+    CV_EXTRACT_GRAPH_PROMPT,
+    JD_EXTRACT_GRAPH_PROMPT,
+    SUMMERIZE_CV_PROMPT,
+    SUMMERIZE_JD_PROMPT
 )
+from src.index.utils import cal_exp
+import json
 import os
+
 class Entity:
     def __init__(self, entity_name:str, entity_type:str, entity_description:str):
         self.entity_name = entity_name
@@ -72,17 +78,83 @@ class EntityExtractor:
                 relationship_list.append(Relationship(source_entity, target_entity, relationship_description))
         return entities_list, relationship_list
     
-    def get_entities_from_cv(self, cv:str, entity_types:str="") -> list[Entity]:
+    def get_entities_from_cv(self, cv:str, entity_types:str="", log_file_name:str="") -> Tuple[list[Entity], float]:
         if entity_types == "":
             entity_types = self.entities
 
-        response = self.llm.chat([
-            {'role':'user','content':CV_EXTRACT_GRAPH_PROMPT.format(entity_types=entity_types ,  input_text= cv)}
+        summerize_cv = self.llm.chat([
+            {'role':'user','content':SUMMERIZE_CV_PROMPT.format(cv= cv)}
             
         ])
-        print(response)
+        
+        exp = 0
+        try:
+            skill, exp_text = summerize_cv.split("##")
+            skill = skill.split('```json')[1].split('```')[0]
+            exp_text = exp_text.split('```json')[1].split('```')[0]
+
+            skill = json.loads(skill)["skill"]
+            exp_list = json.loads(exp_text)
+            for e in exp_list:
+                exp += cal_exp(e["start_time"], e["end_time"])
+        except:
+            print('!!Exception when process cv')
+            return [], 0
+
+
+        response = self.llm.chat([
+            {'role':'user','content':CV_EXTRACT_GRAPH_PROMPT.format(entity_types=entity_types ,  input_text= skill)}
+            
+        ])
+
+        if log_file_name != "":
+            with open(f'{self.cache_folder}/{log_file_name}', 'w', encoding='utf-8') as f:
+                f.write(response)
+
         entities_list, relationship_list = self.parse_entities(response)
-        return entities_list
+        return entities_list, exp
+    
+    def get_entities_from_jd(self, jd:str, entity_types:str="", log_file_name:str="") -> Tuple[list[Entity], float]:
+        if entity_types == "":
+            entity_types = self.entities
+
+        summerize_jd = self.llm.chat([
+            {'role':'user','content':SUMMERIZE_JD_PROMPT.format(jd = jd)}
+            
+        ])
+        print('summerize_jd', summerize_jd)
+        requirements = ""
+        exp = 0
+        try:
+            for entity in summerize_jd.split("##"):
+                entity = entity.strip('\n').strip()
+                if entity == 0: continue
+                
+                if entity.lower().startswith('requires'):
+                    requirements = entity
+                elif entity.lower().startswith('degree'):
+                    """to do: process degree"""
+                    pass
+                elif entity.lower().startswith('place'):
+                    requirements += "\n" + entity
+                elif entity.lower().startswith('exp'):
+                    exp = float(entity.split(':')[1])
+        except:
+            print('!!Exception when process jd')
+            return [], 0
+
+
+        response = self.llm.chat([
+            {'role':'user','content':JD_EXTRACT_GRAPH_PROMPT.format(entity_types=entity_types ,  input_text= requirements)}
+            
+        ])
+        
+        if log_file_name != "":
+            with open(f'{self.cache_folder}/{log_file_name}', 'w', encoding='utf-8') as f:
+                f.write(response)
+
+        entities_list, relationship_list = self.parse_entities(response)
+        return entities_list, exp    
 
 if __name__ == "__main__":
     from src.utils.config_loader import ConfigLoader

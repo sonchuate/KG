@@ -78,30 +78,32 @@ class EntityExtractor:
                 relationship_list.append(Relationship(source_entity, target_entity, relationship_description))
         return entities_list, relationship_list
     
-    def get_entities_from_cv(self, cv:str, entity_types:str="", log_file_name:str="") -> Tuple[list[Entity], float]:
+    def get_entities_from_cv(self, cv:str, entity_types:str="", log_file_name:str="", is_short:bool=False) -> Tuple[list[Entity], float]:
         if entity_types == "":
             entity_types = self.entities
 
-        summerize_cv = self.llm.chat([
-            {'role':'user','content':SUMMERIZE_CV_PROMPT.format(cv= cv)}
-            
-        ])
+        if not is_short:
+            summerize_cv = self.llm.chat([
+                {'role':'user','content':SUMMERIZE_CV_PROMPT.format(cv= cv)}
+                
+            ])
         
-        exp = 0
-        try:
-            skill, exp_text = summerize_cv.split("##")
-            skill = skill.split('```json')[1].split('```')[0]
-            exp_text = exp_text.split('```json')[1].split('```')[0]
+            exp = 0
+            try:
+                skill, exp_text = summerize_cv.split("##")
+                skill = skill.split('```json')[1].split('```')[0]
+                exp_text = exp_text.split('```json')[1].split('```')[0]
 
-            skill = json.loads(skill)["skill"]
-            exp_list = json.loads(exp_text)
-            for e in exp_list:
-                exp += cal_exp(e["start_time"], e["end_time"])
-        except:
-            print('!!Exception when process cv')
-            return [], 0
+                skill = json.loads(skill)["skill"]
+                exp_list = json.loads(exp_text)
+                for e in exp_list:
+                    exp += cal_exp(e["start_time"], e["end_time"])
+            except:
+                print('!!Exception when process cv')
+                return [], 0
 
-
+        else:
+            skill = cv
         response = self.llm.chat([
             {'role':'user','content':CV_EXTRACT_GRAPH_PROMPT.format(entity_types=entity_types ,  input_text= skill)}
             

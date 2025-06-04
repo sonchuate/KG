@@ -1,5 +1,6 @@
 from neo4j import GraphDatabase
 from src.preprocess.utils import process_string
+from typing import List, Tuple
 
 class Node:
     def __init__(self, label: str, properties: dict):
@@ -215,39 +216,123 @@ class GraphManager:
             print(f"Đã xảy ra lỗi: {e}")
         finally:
             driver.close()
+
+    def jaccard_similarity_top(self, A:Node, label_B:str, top_n:int=5) -> list[Tuple[str, float]]:
+        """
+        Lấy top N node cùng label tương tự nhất với node (label, name) dựa trên Jaccard similarity
+        tính trên tập các node kề (bất kỳ quan hệ, bất kỳ chiều).
+        
+        Trả về danh sách tuple: [(tên_node, độ_tương_tự), ...] sắp xếp giảm dần similarity.
+        """
+        query = f"""
+        MATCH (a:`{A.label}` {{name: $name}})
+        MATCH (a)-[]-(aNeighbor)
+        WITH a, collect(DISTINCT aNeighbor) AS aNeighbors
+        
+        MATCH (b:`{label_B}`)
+        WHERE b.name <> $name
+        MATCH (b)-[]-(bNeighbor)
+        WITH a, aNeighbors, b, collect(DISTINCT bNeighbor) AS bNeighbors
+        
+        WITH b.name AS otherName,
+          [x IN aNeighbors WHERE x IN bNeighbors] AS intersection,
+          aNeighbors + bNeighbors AS unionAll
+        
+        WITH otherName,
+          size(intersection) * 1.0 / size(
+            REDUCE(s = [], n IN unionAll | CASE WHEN n IN s THEN s ELSE s + n END)
+          ) AS jaccardSim
+        ORDER BY jaccardSim DESC
+        LIMIT $top_n
+        
+        RETURN otherName, jaccardSim
+        """
+        with self.driver.session() as session:
+            result = session.run(query, name=A.properties["name"], top_n=top_n)
+            return [(record["otherName"], record["jaccardSim"]) for record in result]
+
+    def jaccard_similarity_score(self, A:Node, B:Node) -> float:
+        """
+        Tính Jaccard similarity giữa 2 node có label = `label` và thuộc tính name = name1, name2,
+        dựa trên tập các node kề (bất kỳ quan hệ và chiều) của 2 node này.
+        
+        :param label: Label của node (string)
+        :param name1: Thuộc tính name của node thứ nhất (string)
+        :param name2: Thuộc tính name của node thứ hai (string)
+        :return: float, độ tương đồng Jaccard (0.0-1.0)
+        """
+        query = f"""
+        MATCH (a:`{A.label}` {{name: $name1}})
+        MATCH (b:`{B.label}` {{name: $name2}})
+        
+        MATCH (a)-[]-(aNeighbor)
+        WITH a, b, collect(DISTINCT aNeighbor) AS aNeighbors
+        
+        MATCH (b)-[]-(bNeighbor)
+        WITH aNeighbors, collect(DISTINCT bNeighbor) AS bNeighbors
+        
+        WITH
+          [x IN aNeighbors WHERE x IN bNeighbors] AS intersection,
+          aNeighbors + bNeighbors AS unionAll
+        
+        WITH intersection,
+          REDUCE(s = [], n IN unionAll | CASE WHEN n IN s THEN s ELSE s + n END) AS unionSet
+        
+        RETURN
+          size(intersection) * 1.0 / size(unionSet) AS jaccardSim
+        """
+        with self.driver.session() as session:
+            result = session.run(query, name1=A.properties["name"], name2=B.properties["name"])
+            record = result.single()
+            if record:
+                return record["jaccardSim"]
+            else:
+                return 0.0
             
-def main():
-    # Khởi tạo kết nối Neo4j
-    g = GraphManager("neo4j://localhost:7687", "neo4j", "123123aA@")
-
-    # Tạo node A và các node khác
-    node1 = Node("Person", {"name": "Alice"})
-    node2 = Node("Person", {"name": "Bob"})
-    node3 = Node("City", {"name": "Hanoi"})
-    node4 = Node("City", {"name": "Ho Chi Minh"})
-
-    # Thêm các node vào Neo4j
-    g.add_node(node1)
-    g.add_node(node2)
-    g.add_node(node3)
-    g.add_node(node4)
-
-    # Tạo các cạnh (edge)
-    edge1 = Edge(node1, node2, "KNOWS")
-    edge4 = Edge(node3, node1, "LIVES_IN")  # Mối quan hệ ngược
-
-    # Thêm các cạnh vào Neo4j
-    g.add_edge(edge1)
-    g.add_edge(edge4)
-
-    # Lấy ra các node có liên quan đến "Alice"
-    related_nodes = g.get_relations_to_node(Node("Person", {"name": "Alice"}))
-    
-    print("Nodes related to Alice:")
-    for related_node in related_nodes:
-        print(f"Node:  {related_node.node.label} {related_node.node.properties}, Relationship: {related_node.relationship}")
-    g.clear_graph()
-    g.close()
-
 if __name__ == "__main__":
-    main()
+    uri = "bolt://localhost:7687"
+    user = "neo4j"
+    password = "123123aA@"
+
+    gm = GraphManager(uri, user, password)
+    top_similar = gm.jaccard_similarity_top(Node("h", {"name": "bắc_bộ"}), "h", top_n=5)
+    for name, sim in top_similar:
+        print(f"{name}: {sim:.3f}")
+
+    print(gm.jaccard_similarity_score(Node("h", {"name": "bắc_bộ"}), Node("h", {"name": "hà_nội"})))
+    gm.close()
+# def main():
+#     # Khởi tạo kết nối Neo4j
+#     g = GraphManager("neo4j://localhost:7687", "neo4j", "123123aA@")
+
+#     # Tạo node A và các node khác
+#     node1 = Node("Person", {"name": "Alice"})
+#     node2 = Node("Person", {"name": "Bob"})
+#     node3 = Node("City", {"name": "Hanoi"})
+#     node4 = Node("City", {"name": "Ho Chi Minh"})
+
+#     # Thêm các node vào Neo4j
+#     g.add_node(node1)
+#     g.add_node(node2)
+#     g.add_node(node3)
+#     g.add_node(node4)
+
+#     # Tạo các cạnh (edge)
+#     edge1 = Edge(node1, node2, "KNOWS")
+#     edge4 = Edge(node3, node1, "LIVES_IN")  # Mối quan hệ ngược
+
+#     # Thêm các cạnh vào Neo4j
+#     g.add_edge(edge1)
+#     g.add_edge(edge4)
+
+#     # Lấy ra các node có liên quan đến "Alice"
+#     related_nodes = g.get_relations_to_node(Node("Person", {"name": "Alice"}))
+    
+#     print("Nodes related to Alice:")
+#     for related_node in related_nodes:
+#         print(f"Node:  {related_node.node.label} {related_node.node.properties}, Relationship: {related_node.relationship}")
+#     g.clear_graph()
+#     g.close()
+
+# if __name__ == "__main__":
+#     main()

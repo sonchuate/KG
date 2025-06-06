@@ -13,8 +13,8 @@ TECHNICAL_STOP_WORD = [
 ]
 
 TITLE_STOP_WORD = [
-    "engineer",
-    "engineers"
+    # "engineer",
+    # "engineers"
 ]
 
 STOP_WORD = PLACE_STOP_WORD + TECHNICAL_STOP_WORD + TITLE_STOP_WORD

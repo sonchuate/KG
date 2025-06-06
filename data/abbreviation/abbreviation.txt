@@ -1,1 +1,60 @@
-RDBMS	Relational Database
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+rag	retrieval augmented generation
+ocr	optical character recognition
+rdbms	relational database
+rdbms	relational database
+rdbms	relational database
+rdbms	relational database
+rdbms	relational database
+ci	continuous integration
+cd	continuous delivery
+iac	infrastructure as code
+iac	infrastructure as code
+iac	infrastructure as code
+iac	infrastructure as code
+gcp	google cloud platform
+devsecops	security
+devsecops	security
+devsecops	security
+devsecops	security
+apm	application performance monitoring
+siem	security analytics
+gans	generative adversarial networks
+gans	generative adversarial networks
+gans	generative adversarial networks
+gans	generative adversarial networks
+gans	generative adversarial networks
+vaes	variational autoencoders
+knn	k nearest neighbors
+dqn	deep q networks
+nlp	natural language processing
+cnn	convolutional neural networks
+rnn	recurrent neural networks
+gan	generative adversarial networks
+nlp	natural language processing
+nlp	natural language processing
+ner	named entity recognition
+nlp	natural language processing
+pos	part of speech tagging
+nlp	natural language processing
+nlp	natural language processing
+nlp	natural language processing
+nlp	natural language processing
+nlp	natural language processing
+sdlc	software development life cycle
+sdlc	software development life cycle
+sdlc	software development life cycle
+sdlc	software development life cycle
+coding	implementation
+sdlc	software development life cycle
+sdlc	software development life cycle
+sdlc	software development life cycle

@@ -30,17 +30,19 @@ def get_top_similar_node(gm: GraphManager, root_node:Node, neighbor_nodes:list[N
     for node in neighbor_nodes:
         gm.add_edge(Edge(root_node, node, TYPE_OF_EDGE))
 
-    type_of_node = node.label
-    for node_name in get_father_node_name(gm,root_node, num_gen):
-        print("father node", node_name)
-        gm.add_edge(Edge(root_node, Node(type_of_node, {"name":node_name}), TYPE_OF_EDGE))
+    for neighbor_node in neighbor_nodes:
+        neighbor_node_name = node.properties["name"]
+        neighbor_node = Node(TYPE_OF_ENTITY_IN_KG, {"name" : neighbor_node_name})
+        for node_name in get_father_node_name(gm, neighbor_node, num_gen):
+            print("father node", node_name)
+            gm.add_edge(Edge(root_node, Node(TYPE_OF_JOB_ENTITY, {"name":node_name}), TYPE_OF_EDGE))
 
     list_node_name, list_score = [], []
     for (node_name, score) in gm.jaccard_similarity_top(root_node, label, top_k):
         list_node_name.append(node_name)
         list_score.append(score)
 
-    return list_node_name, list_node_name
+    return list_node_name, list_score
 
 if __name__ == "__main__":
     

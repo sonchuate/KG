@@ -140,11 +140,19 @@ class EntityExtractor:
                 elif entity.lower().startswith('place'):
                     requirements += "\n" + entity
                 elif entity.lower().startswith('exp'):
-                    exp = float(entity.split(':')[1])
+                    exp = entity.strip()
         except:
             print('!!Exception when process jd')
             return [], 0
 
+        try:
+            for id, c in enumerate(exp):
+                if c not in "0123456789.":
+                    exp = exp[:id]
+                    break
+            exp = float(exp.split(':')[1])
+        except:
+            exp = 0
 
         response = self.llm.chat([
             {'role':'user','content':JD_EXTRACT_GRAPH_PROMPT.format(entity_types=entity_types ,  input_text= requirements)}
